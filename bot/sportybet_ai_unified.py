@@ -84,43 +84,43 @@ class SportyBetBot:
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
         message = """
-🎯 **Welcome to SportyBet AI Predictor!**
+    🎯 **Welcome to SportyBet AI Predictor!**
 
-Get AI-powered football predictions with real-time data analysis.
+    🤖 Get AI-powered football predictions with real-time data.
 
-📋 **Available Commands:**
-• `/predict <match>` - Get prediction for a match
-• `/hotpicks` - Today's top picks
-• `/help` - Show all commands
-• `/status` - Check bot status
+    📋 **Available Commands:**
+    • ⚡ `/predict <match>` – Get a fast prediction
+    • 🔥 `/hotpicks` – Today’s top picks
+    • 📚 `/help` – Show all commands
+    • 🛡️ `/status` – Check bot status
 
-🔗 **GitHub:** https://github.com/BlueS-3e/sportybet-ai-predictor
-"""
+    🔗 **GitHub:** https://github.com/BlueS-3e/sportybet-ai-predictor
+    """
         await update.message.reply_text(message, parse_mode='Markdown')
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /help command"""
         message = """
-📚 **SportyBet AI Predictor - Commands**
+    📚 **SportyBet AI Predictor – Commands**
 
-🎮 **Prediction Commands:**
-• `/predict Arsenal vs Chelsea` - Get match prediction
-• `/hotpicks` - Today's best picks
-• `/analyze <match>` - Detailed analysis
+    🎮 **Prediction Commands:**
+    • ⚡ `/predict Arsenal vs Chelsea` – Get a quick prediction
+    • 🔥 `/hotpicks` – Today’s best picks
+    • 🧠 `/analyze <match>` – Detailed analysis
 
-📊 **User Commands:**
-• `/profile` - Your profile
-• `/balance` - Account balance
-• `/history` - Prediction history
-• `/status` - System status
+    👤 **User Commands:**
+    • 🪪 `/profile` – Your profile
+    • 💰 `/balance` – Account balance
+    • 📜 `/history` – Prediction history
+    • 🛡️ `/status` – System status
 
-💡 **Tips:**
-• Use team names as they appear in the Premier League, La Liga, etc.
-• Predictions are AI-generated based on team strength and historical data
-• Confidence score indicates prediction reliability
+    💡 **Tips:**
+    • Use official team names (Premier League, La Liga, etc.)
+    • Predictions are AI-generated from team strength + form
+    • Confidence shows reliability of the pick
 
-🔗 More info: /status
-"""
+    🔗 More info: /status
+    """
         await update.message.reply_text(message, parse_mode='Markdown')
     
     async def predict_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -156,9 +156,9 @@ Get AI-powered football predictions with real-time data analysis.
 🏆 **{home.strip()} vs {away.strip()}**
 
 📊 **Probabilities:**
-• Home Win: {probs.get('home', 0):.1%}
-• Draw: {probs.get('draw', 0):.1%}
-• Away Win: {probs.get('away', 0):.1%}
+• 🏠 Home Win: {probs.get('home', 0):.1%}
+• 🤝 Draw: {probs.get('draw', 0):.1%}
+• 🛫 Away Win: {probs.get('away', 0):.1%}
 
 ✅ **Recommendation:** {recommendation.upper()}
 📈 **Confidence:** {confidence}%
@@ -171,20 +171,20 @@ Get AI-powered football predictions with real-time data analysis.
     async def hotpicks_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /hotpicks command"""
         message = """
-🔥 **Today's Hot Picks**
+    🔥 **Today’s Hot Picks**
 
-🥇 **Top Pick:**
-Manchester City vs Arsenal
-Prediction: Manchester City Win
-Confidence: 78%
+    🥇 **Top Pick:**
+    Manchester City vs Arsenal
+    Prediction: Manchester City ✅
+    Confidence: 78%
 
-🥈 **Runner-up:**
-Real Madrid vs Barcelona
-Prediction: Real Madrid Win
-Confidence: 72%
+    🥈 **Runner-up:**
+    Real Madrid vs Barcelona
+    Prediction: Real Madrid ✅
+    Confidence: 72%
 
-💡 Powered by AI analysis of team strength and recent form
-"""
+    💡 Powered by AI analysis of team strength and recent form
+    """
         await update.message.reply_text(message, parse_mode='Markdown')
     
     async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -193,21 +193,21 @@ Confidence: 72%
         ml_status = "✅ Loaded" if ML_MODEL_AVAILABLE else "⚠️ Fallback"
         
         message = f"""
-📊 **Bot Status**
+    📊 **Bot Status**
 
-{status}
-ML Model: {ml_status}
-Canonical Helpers: {'✅ Available' if CANONICAL_HELPERS_AVAILABLE else '❌ N/A'}
+    {status}
+    🤖 ML Model: {ml_status}
+    🧠 Canonical Helpers: {'✅ Available' if CANONICAL_HELPERS_AVAILABLE else '❌ N/A'}
 
-🏆 Covering 5 major leagues:
-• Premier League
-• La Liga
-• Bundesliga
-• Serie A
-• Ligue 1
+    🏆 Covering 5 major leagues:
+    • 🏴 Premier League
+    • 🇪🇸 La Liga
+    • 🇩🇪 Bundesliga
+    • 🇮🇹 Serie A
+    • 🇫🇷 Ligue 1
 
-Use /help for commands
-"""
+    ℹ️ Use /help for commands
+    """
         await update.message.reply_text(message, parse_mode='Markdown')
     
     async def run(self):
