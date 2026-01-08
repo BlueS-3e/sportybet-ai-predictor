@@ -39,6 +39,8 @@ class Database:
             'balance': 0.0,
             'total_predictions': 0,
             'correct_predictions': 0,
+            'daily_predictions_left': 3,
+            'last_reset_date': datetime.now().date().isoformat(),
             'is_active': True
         }
         
@@ -48,7 +50,14 @@ class Database:
     
     def get_user(self, user_id: int):
         """Get user by ID"""
-        return self.users.get(user_id)
+        user = self.users.get(user_id)
+        if user:
+            # Reset daily predictions if it's a new day
+            today = datetime.now().date().isoformat()
+            if user.get('last_reset_date') != today:
+                user['daily_predictions_left'] = 3
+                user['last_reset_date'] = today
+        return user
     
     def update_user_balance(self, user_id: int, amount: float):
         """Update user balance"""
@@ -81,6 +90,11 @@ class Database:
                 self.users[user_id]['correct_predictions'] += 1
         
         return record
+    
+    def log_prediction(self, user_id: int, match: str, prediction: str,
+                      confidence: float, probabilities: dict = None, correct: bool = None):
+        """Log prediction (alias for record_prediction with probabilities support)"""
+        return self.record_prediction(user_id, match, prediction, confidence, correct)
     
     def get_user_prediction_history(self, user_id: int, limit: int = 10):
         """Get user's prediction history"""
@@ -213,6 +227,68 @@ class Database:
             logger.info(f"🔒 User {user_id} deactivated")
             return True
         return False
+    
+    def get_today_prediction_count(self):
+        """Get total predictions made today"""
+        today = datetime.now().date()
+        count = 0
+        for user_predictions in self.predictions.values():
+            for pred in user_predictions:
+                pred_date = datetime.fromisoformat(pred['timestamp']).date()
+                if pred_date == today:
+                    count += 1
+        return count
+    
+    def get_active_users_count(self):
+        """Get count of active users"""
+        return sum(1 for user in self.users.values() if user.get('is_active', True))
+    
+    def get_total_users(self):
+        """Get total number of users"""
+        return len(self.users)
+    
+    def get_total_predictions(self):
+        """Get total number of predictions across all users"""
+        return sum(len(preds) for preds in self.predictions.values())
+    
+    def get_global_accuracy(self):
+        """Get global prediction accuracy rate"""
+        total = 0
+        correct = 0
+        for user_predictions in self.predictions.values():
+            for pred in user_predictions:
+                if pred.get('correct') is not None:
+                    total += 1
+                    if pred.get('correct') is True:
+                        correct += 1
+        return (correct / total * 100) if total > 0 else 0.0
+    
+    def get_correct_predictions_count(self):
+        """Get total number of correct predictions"""
+        count = 0
+        for user_predictions in self.predictions.values():
+            count += sum(1 for pred in user_predictions if pred.get('correct') is True)
+        return count
+    
+    def get_average_confidence(self):
+        """Get average confidence across all predictions"""
+        confidences = []
+        for user_predictions in self.predictions.values():
+            confidences.extend([pred['confidence'] for pred in user_predictions if 'confidence' in pred])
+        return (sum(confidences) / len(confidences) * 100) if confidences else 0.0
+    
+    def get_longest_streak(self):
+        """Get the longest winning streak across all users"""
+        max_streak = 0
+        for user_predictions in self.predictions.values():
+            current_streak = 0
+            for pred in user_predictions:
+                if pred.get('correct') is True:
+                    current_streak += 1
+                    max_streak = max(max_streak, current_streak)
+                elif pred.get('correct') is False:
+                    current_streak = 0
+        return max_streak
 
 
 # Global database instance
