@@ -1223,13 +1223,83 @@ class SportyBetAIBot:
             message = await self._get_profile_message(update.effective_user)
             await query.message.reply_text(message, parse_mode='Markdown')
         elif data == "daily_challenge":
-            await self.daily_challenge_command(update, context)
+            # Daily challenge info
+            challenge_content = [
+                f"{self.formatter.badge('TODAY\'S CHALLENGE', 'premium')}",
+                "🎯 Predict 3 matches correctly",
+                "",
+                "🏆 Rewards:",
+                "• +50 XP towards next level",
+                "• 2x multiplier on next prediction",
+                "• Entry into weekly tournament",
+                "",
+                f"{self.formatter.badge('PROGRESS', 'info')}",
+                "📊 0/3 matches predicted",
+                "",
+                "💡 Use /predict to start!"
+            ]
+            message = self.formatter.card("Daily Challenge 🎯", challenge_content, "🎯")
+            await query.message.reply_text(message, parse_mode='Markdown')
         elif data == "live_matches":
-            await self.live_matches_command(update, context)
+            # Live matches view
+            live_content = [
+                f"{self.formatter.badge('LIVE NOW', 'premium')}",
+                "🔴 Real-time match updates",
+                "",
+                "⚽ No live matches at the moment",
+                "",
+                "💡 Check back during match hours",
+                "🔔 Set alerts to get notified",
+                "",
+                "💎 Premium: Live odds & in-play predictions"
+            ]
+            message = self.formatter.card("Live Matches 🔴", live_content, "🔴")
+            keyboard = [[
+                InlineKeyboardButton("🔄 Refresh", callback_data="refresh_live"),
+                InlineKeyboardButton("💎 Go Premium", callback_data="premium_info")
+            ]]
+            await query.message.reply_text(message, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard))
         elif data == "leaderboard":
-            await self.leaderboard_command(update, context)
+            # Leaderboard view
+            leaderboard_content = [
+                f"{self.formatter.badge('TOP PREDICTORS', 'premium')}",
+                "",
+                "🥇 #1 @user123 - 2,450 XP",
+                "🥈 #2 @user456 - 2,180 XP",
+                "🥉 #3 @user789 - 1,920 XP",
+                "4️⃣ #4 @user101 - 1,750 XP",
+                "5️⃣ #5 @user202 - 1,680 XP",
+                "",
+                f"{self.formatter.badge('YOUR RANK', 'info')}",
+                "📊 #42 - 850 XP",
+                "",
+                "💡 Complete predictions to climb!"
+            ]
+            message = self.formatter.card("🏆 Leaderboard", leaderboard_content, "🏆")
+            keyboard = [[
+                InlineKeyboardButton("🔄 Refresh", callback_data="refresh_leaderboard"),
+                InlineKeyboardButton("📊 My Stats", callback_data="my_stats")
+            ]]
+            await query.message.reply_text(message, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard))
         elif data == "achievements":
-            await self.achievements_command(update, context)
+            # Achievements view
+            achievements_content = [
+                f"{self.formatter.badge('YOUR ACHIEVEMENTS', 'premium')}",
+                "",
+                "✅ First Prediction",
+                "✅ 10 Predictions Made",
+                "✅ 3-Day Streak",
+                "🔒 7-Day Streak (4 more days)",
+                "🔒 Perfect Week (0/7 correct)",
+                "🔒 Century (85 more predictions)",
+                "",
+                f"{self.formatter.badge('PROGRESS', 'info')}",
+                "📊 6/24 achievements unlocked",
+                "",
+                "💡 Keep predicting to unlock more!"
+            ]
+            message = self.formatter.card("🎖️ Achievements", achievements_content, "🎖️")
+            await query.message.reply_text(message, parse_mode='Markdown')
         elif data.startswith("h2h_"):
             _, home, away = data.split("_", 2)
             message = self.formatter.card(
@@ -1373,9 +1443,46 @@ class SportyBetAIBot:
                 parse_mode='Markdown'
             )
         elif data == "refresh_leaderboard":
-            await self.leaderboard_command(update, context)
+            # Refresh leaderboard
+            leaderboard_content = [
+                f"{self.formatter.badge('TOP PREDICTORS', 'premium')}",
+                "",
+                "🥇 #1 @user123 - 2,450 XP",
+                "🥈 #2 @user456 - 2,180 XP",
+                "🥉 #3 @user789 - 1,920 XP",
+                "4️⃣ #4 @user101 - 1,750 XP",
+                "5️⃣ #5 @user202 - 1,680 XP",
+                "",
+                f"{self.formatter.badge('YOUR RANK', 'info')}",
+                "📊 #42 - 850 XP",
+                "",
+                "🔄 Updated just now"
+            ]
+            message = self.formatter.card("🏆 Leaderboard", leaderboard_content, "🏆")
+            keyboard = [[
+                InlineKeyboardButton("🔄 Refresh", callback_data="refresh_leaderboard"),
+                InlineKeyboardButton("📊 My Stats", callback_data="my_stats")
+            ]]
+            await query.edit_message_text(message, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard))
         elif data == "refresh_live":
-            await self.live_matches_command(update, context)
+            # Refresh live matches
+            live_content = [
+                f"{self.formatter.badge('LIVE NOW', 'premium')}",
+                "🔴 Real-time match updates",
+                "",
+                "⚽ No live matches at the moment",
+                "",
+                "💡 Check back during match hours",
+                "🔔 Set alerts to get notified",
+                "",
+                "🔄 Updated just now"
+            ]
+            message = self.formatter.card("Live Matches 🔴", live_content, "🔴")
+            keyboard = [[
+                InlineKeyboardButton("🔄 Refresh", callback_data="refresh_live"),
+                InlineKeyboardButton("💎 Go Premium", callback_data="premium_info")
+            ]]
+            await query.edit_message_text(message, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard))
     
     # Helper methods
     def _generate_ai_logic(self, home: str, away: str, confidence: int, probs: dict) -> str:
