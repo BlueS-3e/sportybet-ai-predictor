@@ -210,14 +210,13 @@ class SportyBetBot:
     """
         await update.message.reply_text(message, parse_mode='Markdown')
     
-    async def run(self):
-        """Run the bot"""
+    def run(self):
+        """Run the bot (blocking)"""
         if not self.application:
             logger.error("❌ Telegram bot not available")
             return
         logger.info("🤖 Starting SportyBet AI Bot (polling)...")
-        # Run polling and block until stopped
-        await self.application.run_polling(allowed_updates=Update.ALL_TYPES)
+        self.application.run_polling(allowed_updates=Update.ALL_TYPES)
         logger.info("✅ Bot stopped")
 
 
@@ -225,8 +224,7 @@ def main():
     """Main entry point"""
     try:
         bot = SportyBetBot()
-        import asyncio
-        asyncio.run(bot.run())
+        bot.run()
     except KeyboardInterrupt:
         logger.info("Shutting down...")
     except Exception as e:
