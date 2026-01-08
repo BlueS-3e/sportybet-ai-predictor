@@ -215,20 +215,10 @@ class SportyBetBot:
         if not self.application:
             logger.error("❌ Telegram bot not available")
             return
-        
-        logger.info("🤖 Starting SportyBet AI Bot...")
-        await self.application.initialize()
-        await self.application.start()
-        await self.application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
-        logger.info("✅ Bot is running! Press Ctrl+C to stop.")
-        
-        # Keep the bot running
-        try:
-            await self.application.updater.stop()
-            await self.application.stop()
-            await self.application.shutdown()
-        except KeyboardInterrupt:
-            logger.info("Bot stopped by user")
+        logger.info("🤖 Starting SportyBet AI Bot (polling)...")
+        # Run polling and block until stopped
+        await self.application.run_polling(allowed_updates=Update.ALL_TYPES)
+        logger.info("✅ Bot stopped")
 
 
 def main():
