@@ -8,6 +8,9 @@ import logging
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Local data helpers
+from monetization_db import get_database
+
 # Load environment variables
 load_dotenv(Path(__file__).parent.parent / '.env')
 
@@ -55,6 +58,10 @@ except ImportError:
     TELEGRAM_AVAILABLE = False
 
 
+# Shared database instance
+db = get_database()
+
+
 class SportyBetBot:
     """Main Telegram bot for SportyBet AI Predictor"""
     
@@ -79,6 +86,10 @@ class SportyBetBot:
         self.application.add_handler(CommandHandler("help", self.help_command))
         self.application.add_handler(CommandHandler("predict", self.predict_command))
         self.application.add_handler(CommandHandler("hotpicks", self.hotpicks_command))
+        self.application.add_handler(CommandHandler("analyze", self.analyze_command))
+        self.application.add_handler(CommandHandler("profile", self.profile_command))
+        self.application.add_handler(CommandHandler("balance", self.balance_command))
+        self.application.add_handler(CommandHandler("history", self.history_command))
         self.application.add_handler(CommandHandler("status", self.status_command))
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -167,6 +178,51 @@ class SportyBetBot:
         except Exception as e:
             logger.error(f"Prediction error: {e}")
             await update.message.reply_text("❌ Error generating prediction. Try again.")
+
+    async def analyze_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /analyze command with richer card"""
+        if not context.args:
+            await update.message.reply_text("Usage: /analyze Arsenal vs Chelsea")
+            return
+
+        match_query = ' '.join(context.args)
+        if ' vs ' in match_query:
+            home, away = match_query.split(' vs ', 1)
+        elif ' v ' in match_query:
+            home, away = match_query.split(' v ', 1)
+        else:
+            await update.message.reply_text("Format: /analyze Team1 vs Team2")
+            return
+
+        try:
+            result = predict_match(home.strip(), away.strip()) if CANONICAL_HELPERS_AVAILABLE else {
+                'probabilities': {'home': 0.35, 'draw': 0.30, 'away': 0.35},
+                'confidence': 0.65,
+                'recommended_bet': 'Draw'
+            }
+            probs = result.get('probabilities', {})
+            confidence = int(result.get('confidence', 0.5) * 100)
+            recommendation = result.get('recommended_bet', 'Draw')
+
+            message = f"""
+🎟️ **Match Preview**
+{home.strip()} vs {away.strip()}
+
+📊 **Win Probabilities**
+• 🏠 Home: {probs.get('home', 0):.1%}
+• 🤝 Draw: {probs.get('draw', 0):.1%}
+• 🛫 Away: {probs.get('away', 0):.1%}
+
+🧠 **AI Edge**
+• Recommendation: **{recommendation.upper()}**
+• Confidence: {confidence}%
+
+💡 Tip: Bet size should match confidence.
+"""
+            await update.message.reply_text(message, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Analyze error: {e}")
+            await update.message.reply_text("❌ Error analyzing match. Try again.")
     
     async def hotpicks_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /hotpicks command"""
@@ -186,6 +242,47 @@ class SportyBetBot:
     💡 Powered by AI analysis of team strength and recent form
     """
         await update.message.reply_text(message, parse_mode='Markdown')
+
+    async def profile_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show user profile"""
+        user = update.effective_user
+        rec = db.create_user(user.id, user.username or user.full_name)
+        stats = db.get_user_stats(user.id) or {}
+        message = f"""
+🪪 **Profile**
+• User: @{user.username or user.full_name}
+• Tier: {rec.get('subscription_tier', 'free').title()}
+• Balance: ${rec.get('balance', 0):.2f}
+• Predictions: {stats.get('total_predictions', 0)} made
+• Accuracy: {stats.get('accuracy_percentage', 0):.0f}%
+"""
+        await update.message.reply_text(message, parse_mode='Markdown')
+
+    async def balance_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show user balance"""
+        user = update.effective_user
+        rec = db.create_user(user.id, user.username or user.full_name)
+        message = f"""
+💰 **Balance**
+• Available: ${rec.get('balance', 0):.2f}
+• Tier: {rec.get('subscription_tier', 'free').title()}
+
+Upgrade to **Premium** for more daily predictions.
+"""
+        await update.message.reply_text(message, parse_mode='Markdown')
+
+    async def history_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show recent prediction history"""
+        user = update.effective_user
+        history = db.get_user_prediction_history(user.id, limit=5)
+        if not history:
+            await update.message.reply_text("📜 No predictions yet. Try /predict first!")
+            return
+        lines = ["📜 **Recent Predictions**"]
+        for item in history:
+            status = "✅" if item.get('correct') else "❔"
+            lines.append(f"{status} {item['match']} • {item['prediction']} ({int(item['confidence']*100)}%)")
+        await update.message.reply_text("\n".join(lines), parse_mode='Markdown')
     
     async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /status command"""
