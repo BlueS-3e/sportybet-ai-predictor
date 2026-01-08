@@ -91,6 +91,11 @@ class SportyBetBot:
         self.application.add_handler(CommandHandler("balance", self.balance_command))
         self.application.add_handler(CommandHandler("history", self.history_command))
         self.application.add_handler(CommandHandler("status", self.status_command))
+
+        # Catch-all text handler to guide users without commands
+        self.application.add_handler(
+            MessageHandler(filters.TEXT & ~filters.COMMAND, self.fallback_message)
+        )
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
@@ -283,6 +288,22 @@ Upgrade to **Premium** for more daily predictions.
             status = "✅" if item.get('correct') else "❔"
             lines.append(f"{status} {item['match']} • {item['prediction']} ({int(item['confidence']*100)}%)")
         await update.message.reply_text("\n".join(lines), parse_mode='Markdown')
+
+    async def fallback_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Guide users who send plain text without commands"""
+        text = (update.message.text or "").strip()
+        prompt = f"""
+👋 I’m **ScoreHawkBot**.
+
+Use commands to get started:
+• ⚡ /predict Team1 vs Team2
+• 🧠 /analyze Team1 vs Team2
+• 🔥 /hotpicks
+• 📚 /help
+
+You sent: `{text}`
+"""
+        await update.message.reply_text(prompt, parse_mode='Markdown')
     
     async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /status command"""
@@ -313,7 +334,10 @@ Upgrade to **Premium** for more daily predictions.
             logger.error("❌ Telegram bot not available")
             return
         logger.info("🤖 Starting SportyBet AI Bot (polling)...")
-        self.application.run_polling(allowed_updates=Update.ALL_TYPES)
+        self.application.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,
+        )
         logger.info("✅ Bot stopped")
 
 
