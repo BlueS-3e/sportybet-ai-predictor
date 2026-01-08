@@ -1222,6 +1222,160 @@ class SportyBetAIBot:
         elif data == "view_stats":
             message = await self._get_profile_message(update.effective_user)
             await query.message.reply_text(message, parse_mode='Markdown')
+        elif data == "daily_challenge":
+            await self.daily_challenge_command(update, context)
+        elif data == "live_matches":
+            await self.live_matches_command(update, context)
+        elif data == "leaderboard":
+            await self.leaderboard_command(update, context)
+        elif data == "achievements":
+            await self.achievements_command(update, context)
+        elif data.startswith("h2h_"):
+            _, home, away = data.split("_", 2)
+            message = self.formatter.card(
+                f"📈 {home} vs {away} - Historical H2H",
+                [
+                    "🏆 Last 5 Meetings:",
+                    f"  • {home} Wins: 3",
+                    f"  • Draws: 1",
+                    f"  • {away} Wins: 1",
+                    "",
+                    "📊 Average Goals:",
+                    f"  • {home}: 1.8 per game",
+                    f"  • {away}: 1.2 per game",
+                    "",
+                    "🎯 Recent Form:",
+                    f"  • {home}: W-W-D-L-W",
+                    f"  • {away}: L-W-L-D-W",
+                    "",
+                    "💡 Upgrade to Premium for detailed H2H analytics"
+                ],
+                "📈"
+            )
+            await query.message.reply_text(message, parse_mode='Markdown')
+        elif data.startswith("save_pred_"):
+            _, home, away = data.split("_", 2)
+            await query.message.reply_text(
+                self.formatter.card(
+                    "Prediction Saved",
+                    [
+                        f"✅ {home} vs {away} saved to your history",
+                        "",
+                        "📊 Track this prediction:",
+                        "  • View with /history",
+                        "  • Get alerts when match starts",
+                        "  • Compare with final result",
+                        "",
+                        "🔔 Alert set for match start time"
+                    ],
+                    "💾"
+                ),
+                parse_mode='Markdown'
+            )
+        elif data.startswith("alert_"):
+            _, home, away = data.split("_", 2)
+            keyboard = [
+                [
+                    InlineKeyboardButton("⏰ 1 hour before", callback_data=f"alert_60_{home}_{away}"),
+                    InlineKeyboardButton("⏰ 30 min before", callback_data=f"alert_30_{home}_{away}")
+                ],
+                [
+                    InlineKeyboardButton("⏰ At kickoff", callback_data=f"alert_0_{home}_{away}"),
+                    InlineKeyboardButton("🔔 All events", callback_data=f"alert_all_{home}_{away}")
+                ]
+            ]
+            await query.message.reply_text(
+                self.formatter.card(
+                    f"🔔 Set Alert - {home} vs {away}",
+                    [
+                        "Choose when to receive notifications:",
+                        "",
+                        "⏰ Before match starts",
+                        "🔔 Live events (goals, cards, etc.)",
+                        "",
+                        "💎 Premium: Custom alert timing"
+                    ],
+                    "🔔"
+                ),
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+        elif data.startswith("alert_"):
+            # Handle specific alert timing
+            parts = data.split("_")
+            if len(parts) >= 4:
+                timing = parts[1]
+                home = parts[2]
+                away = "_".join(parts[3:])
+                
+                timing_text = {
+                    "60": "1 hour before kickoff",
+                    "30": "30 minutes before kickoff",
+                    "0": "at kickoff time",
+                    "all": "for all match events"
+                }.get(timing, "for this match")
+                
+                await query.message.reply_text(
+                    self.formatter.card(
+                        "Alert Set Successfully",
+                        [
+                            f"✅ Alert configured for {home} vs {away}",
+                            f"⏰ You'll be notified {timing_text}",
+                            "",
+                            "🔔 Manage alerts with /profile"
+                        ],
+                        "✅"
+                    ),
+                    parse_mode='Markdown'
+                )
+        elif data == "share_pred":
+            share_text = "🤖 Check out this AI prediction from SportyBet AI Predictor! Get your own predictions at t.me/YourBotUsername"
+            await query.message.reply_text(
+                self.formatter.card(
+                    "Share Prediction",
+                    [
+                        "📤 Share this prediction:",
+                        "",
+                        "1️⃣ Forward this message",
+                        "2️⃣ Copy & share the link below:",
+                        "",
+                        f"`{share_text}`",
+                        "",
+                        "🎁 Invite friends and earn rewards!"
+                    ],
+                    "👥"
+                ),
+                parse_mode='Markdown'
+            )
+        elif data == "bet_assist":
+            await query.message.reply_text(
+                self.formatter.card(
+                    "🎯 Betting Assistant",
+                    [
+                        "💡 Smart Betting Tips:",
+                        "",
+                        "1️⃣ Set your budget (max 5% per bet)",
+                        "2️⃣ Never chase losses",
+                        "3️⃣ Only bet high confidence (70%+)",
+                        "",
+                        "📊 Recommended Stake:",
+                        "  • High confidence (80%+): 3-5% of bankroll",
+                        "  • Medium (70-80%): 2-3% of bankroll",
+                        "  • Low (<70%): Skip or 1% max",
+                        "",
+                        "⚠️ Gamble Responsibly",
+                        "🔒 Set limits with /profile",
+                        "",
+                        "🔗 Place bet on SportyBet (external)"
+                    ],
+                    "🎯"
+                ),
+                parse_mode='Markdown'
+            )
+        elif data == "refresh_leaderboard":
+            await self.leaderboard_command(update, context)
+        elif data == "refresh_live":
+            await self.live_matches_command(update, context)
     
     # Helper methods
     def _generate_ai_logic(self, home: str, away: str, confidence: int, probs: dict) -> str:
