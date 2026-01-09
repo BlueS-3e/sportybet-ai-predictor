@@ -276,6 +276,9 @@ class SportyBetAIBot:
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, self.fallback_message)
         )
+        
+        # Error handler for network issues
+        self.application.add_error_handler(self.error_handler)
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command with modern welcome"""
@@ -1177,6 +1180,38 @@ class SportyBetAIBot:
         )
         
         await update.message.reply_text(message, parse_mode='Markdown')
+    
+    async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE):
+        """Handle errors gracefully"""
+        from telegram.error import NetworkError, TimedOut
+        
+        error = context.error
+        
+        # Network errors - log as warning, bot will auto-retry
+        if isinstance(error, (NetworkError, TimedOut)):
+            logger.warning(f"⚠️  Network issue (will auto-retry): {error}")
+            return
+        
+        # Log all other errors
+        logger.error(f"❌ Error: {error}", exc_info=context.error)
+        
+        # Notify user if update exists
+        if update and hasattr(update, 'effective_message'):
+            try:
+                await update.effective_message.reply_text(
+                    self.formatter.card(
+                        "Oops! Something went wrong",
+                        [
+                            "⚠️  An error occurred processing your request",
+                            "🔄 Please try again in a moment",
+                            "📞 Contact support if issue persists"
+                        ],
+                        "⚠️"
+                    ),
+                    parse_mode='Markdown'
+                )
+            except Exception:
+                pass  # Silently fail if we can't send error message
     
     async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle inline keyboard button presses"""
