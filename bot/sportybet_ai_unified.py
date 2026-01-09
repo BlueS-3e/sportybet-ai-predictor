@@ -236,6 +236,7 @@ class SportyBetAIBot:
         
         self.formatter = ModernFormatter()
         self.application = None
+        self.bot_username = None  # Will be fetched on startup
         
         if FEATURES['telegram']:
             self.application = Application.builder().token(self.token).build()
@@ -264,6 +265,8 @@ class SportyBetAIBot:
             CommandHandler("daily", self.daily_challenge_command),
             CommandHandler("webapp", self.webapp_command),
             CommandHandler("live", self.live_matches_command),
+            CommandHandler("referral", self.referral_command),
+            CommandHandler("invite", self.referral_command),
         ]
         
         for handler in handlers:
@@ -282,6 +285,44 @@ class SportyBetAIBot:
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command with modern welcome"""
+        user_id = update.effective_user.id
+        username = update.effective_user.username or update.effective_user.full_name
+        
+        # Check for referral code
+        if context.args and len(context.args) > 0:
+            ref_code = context.args[0]
+            if ref_code.startswith('ref_'):
+                referrer_id = ref_code.replace('ref_', '')
+                try:
+                    referrer_id = int(referrer_id)
+                    # Record referral
+                    if referrer_id != user_id:  # Can't refer yourself
+                        db.record_referral(referrer_id, user_id)
+                        # Grant bonuses
+                        db.add_credits(user_id, 5.0, "Referral welcome bonus")
+                        db.add_credits(referrer_id, 10.0, f"Referral reward for inviting user {user_id}")
+                        db.grant_free_predictions(user_id, 5)
+                        db.grant_free_predictions(referrer_id, 10)
+                        # Notify both users
+                        await update.message.reply_text(
+                            self.formatter.card(
+                                "Welcome Bonus!",
+                                [
+                                    "🎉 You were referred by a friend!",
+                                    "",
+                                    "🎁 You received:",
+                                    "  • $5.00 welcome bonus",
+                                    "  • 5 Free predictions",
+                                    "",
+                                    "💡 Your friend also got rewarded!"
+                                ],
+                                "🎁"
+                            ),
+                            parse_mode='Markdown'
+                        )
+                except (ValueError, TypeError):
+                    pass
+        
         welcome_content = [
             self.formatter.section("Features", [
                 "AI-powered football predictions",
@@ -326,6 +367,9 @@ class SportyBetAIBot:
             [
                 InlineKeyboardButton("🎖️ Achievements", callback_data="achievements"),
                 InlineKeyboardButton("💎 Premium", callback_data="premium_info")
+            ],
+            [
+                InlineKeyboardButton("🎁 Invite Friends & Earn", callback_data="referral")
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -1154,6 +1198,88 @@ class SportyBetAIBot:
         
         await update.message.reply_text(message, parse_mode='Markdown', reply_markup=reply_markup)
     
+    async def referral_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /referral and /invite commands"""
+        await self._send_referral_message(update.message, update.effective_user)
+    
+    async def _send_referral_message(self, message, user):
+        """Send referral information to user"""
+        user_id = user.id
+        username = user.username or user.full_name
+        
+        # Create user if doesn't exist and get referral stats
+        db.create_user(user_id, username)
+        referral_stats = db.get_referral_stats(user_id) or {}
+        
+        # Get bot username dynamically
+        if not self.bot_username:
+            try:
+                bot_info = await self.application.bot.get_me()
+                self.bot_username = bot_info.username
+            except Exception:
+                self.bot_username = "SportyBetAIBot"  # Fallback
+        
+        # Generate referral link
+        referral_link = f"https://t.me/{self.bot_username}?start=ref_{user_id}"
+        
+        # Calculate rewards
+        total_referrals = referral_stats.get('total_referrals', 0)
+        pending_rewards = referral_stats.get('pending_rewards', 0)
+        lifetime_earnings = referral_stats.get('lifetime_earnings', 0)
+        
+        referral_content = [
+            f"{self.formatter.badge('REFERRAL PROGRAM', 'premium')}",
+            "🎁 Invite friends and earn rewards!",
+            "",
+            f"{self.formatter.badge('YOUR STATS', 'info')}",
+            f"👥 Total Referrals: {total_referrals}",
+            f"💰 Pending Rewards: ${pending_rewards:.2f}",
+            f"💎 Lifetime Earnings: ${lifetime_earnings:.2f}",
+            "",
+            f"{self.formatter.badge('REWARDS', 'success')}",
+            "🎁 Your friend gets:",
+            "  • 5 Free predictions",
+            "  • $5.00 welcome bonus",
+            "  • Premium trial (7 days)",
+            "",
+            "🎁 You get:",
+            "  • $10.00 per referral",
+            "  • 10 Free predictions",
+            "  • Bonus XP (100 points)",
+            "",
+            f"{self.formatter.badge('YOUR REFERRAL LINK', 'primary')}",
+            f"`{referral_link}`",
+            "",
+            "📤 Share your link:",
+            "  • Copy and share on social media",
+            "  • Send to friends on Telegram",
+            "  • Post in football groups",
+            "",
+            f"{self.formatter.badge('MILESTONES', 'streak')}",
+            "🏆 5 referrals → Premium (1 month)",
+            "🏆 10 referrals → Premium (3 months)",
+            "🏆 25 referrals → Premium (1 year)",
+            "🏆 50 referrals → Lifetime Premium + $500",
+            "",
+            "💡 Tip: Friends must make their first prediction"
+        ]
+        
+        referral_message = self.formatter.card(
+            "🎁 Invite & Earn",
+            referral_content,
+            "🎁"
+        )
+        
+        keyboard = [[
+            InlineKeyboardButton("📤 Share Link", url=f"https://t.me/share/url?url={referral_link}&text=Join me on SportyBet AI Predictor! Get 5 free predictions and $5 bonus 🎁")
+        ]]
+        
+        await message.reply_text(
+            referral_message,
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
     async def fallback_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle non-command messages"""
         text = (update.message.text or "").strip()
@@ -1518,6 +1644,8 @@ class SportyBetAIBot:
                 InlineKeyboardButton("💎 Go Premium", callback_data="premium_info")
             ]]
             await query.edit_message_text(message, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+        elif data == "referral":
+            await self._send_referral_message(query.message, update.effective_user)
     
     # Helper methods
     def _generate_ai_logic(self, home: str, away: str, confidence: int, probs: dict) -> str:

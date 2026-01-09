@@ -22,6 +22,7 @@ class Database:
         self.users = {}
         self.predictions = {}
         self.subscriptions = {}
+        self.referrals = {}  # referrer_id: [list of referred user_ids]
         
         logger.info(f"📊 Database initialized at {self.db_path}")
     
@@ -289,6 +290,56 @@ class Database:
                 elif pred.get('correct') is False:
                     current_streak = 0
         return max_streak
+    
+    def record_referral(self, referrer_id: int, referred_user_id: int):
+        """Record a referral"""
+        if referrer_id not in self.referrals:
+            self.referrals[referrer_id] = []
+        
+        # Check if already referred
+        if referred_user_id not in self.referrals[referrer_id]:
+            self.referrals[referrer_id].append({
+                'user_id': referred_user_id,
+                'timestamp': datetime.now().isoformat(),
+                'reward_claimed': False
+            })
+            logger.info(f"✅ Referral recorded: {referrer_id} → {referred_user_id}")
+            return True
+        return False
+    
+    def get_referral_stats(self, user_id: int):
+        """Get referral statistics for a user"""
+        referrals = self.referrals.get(user_id, [])
+        total_referrals = len(referrals)
+        
+        # Calculate rewards (would check actual prediction activity in production)
+        pending_rewards = sum(10.0 for ref in referrals if not ref.get('reward_claimed', False))
+        lifetime_earnings = total_referrals * 10.0
+        
+        return {
+            'total_referrals': total_referrals,
+            'pending_rewards': pending_rewards,
+            'lifetime_earnings': lifetime_earnings,
+            'referral_list': referrals
+        }
+    
+    def add_credits(self, user_id: int, amount: float, reason: str = ""):
+        """Add credits to user balance"""
+        if user_id not in self.users:
+            self.create_user(user_id)
+        
+        self.users[user_id]['balance'] += amount
+        logger.info(f"💰 Added ${amount:.2f} to user {user_id}: {reason}")
+        return self.users[user_id]['balance']
+    
+    def grant_free_predictions(self, user_id: int, count: int):
+        """Grant free predictions to user"""
+        if user_id not in self.users:
+            self.create_user(user_id)
+        
+        self.users[user_id]['daily_predictions_left'] = self.users[user_id].get('daily_predictions_left', 3) + count
+        logger.info(f"🎁 Granted {count} free predictions to user {user_id}")
+        return self.users[user_id]['daily_predictions_left']
 
 
 # Global database instance
