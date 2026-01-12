@@ -32,6 +32,27 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Security: Hide bot token from httpx logs
+class TokenFilter(logging.Filter):
+    """Filter to redact bot tokens from logs"""
+    def filter(self, record):
+        if hasattr(record, 'msg') and isinstance(record.msg, str):
+            # Redact tokens in URLs (bot<token>/method format)
+            import re
+            record.msg = re.sub(
+                r'(bot)(\d+:[A-Za-z0-9_-]+)',
+                r'\1***REDACTED***',
+                record.msg
+            )
+        return True
+
+# Apply filter to httpx logger
+httpx_logger = logging.getLogger('httpx')
+httpx_logger.addFilter(TokenFilter())
+httpx_logger.setLevel(logging.WARNING)  # Reduce httpx verbosity
+
+logger = logging.getLogger(__name__)
+
 # Add ML model to path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'ml-model'))
 sys.path.insert(0, str(Path(__file__).parent.parent / 'common'))
